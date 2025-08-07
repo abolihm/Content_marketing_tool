@@ -4,16 +4,20 @@ from django.db import connection
 
 
 @login_required
+@login_required
 def add_project_view(request):
     if request.method == 'POST':
-        name = request.POST.get('name')
-        website_category = request.POST.get('website_category')
-        number_of_publications = request.POST.get('number_of_publications')
-        domain_authority = request.POST.get('domain_authority')
-        domain_rating = request.POST.get('domain_rating')
-        team_allocation = request.POST.get('team_allocation')
-        geolocation = request.POST.get('geolocation')
-        targets = request.POST.get('targets')
+        name = request.POST['name']
+        website_category = request.POST['website_category']
+        number_of_publications = request.POST['number_of_publications']
+        domain_authority = request.POST['domain_authority']
+        domain_rating = request.POST['domain_rating']
+        geolocation = request.POST['geolocation']
+        targets = request.POST['targets']
+        
+        # 🧠 Get the list of users from multiple select
+        team_allocation_list = request.POST.getlist('team_allocation[]')
+        team_allocation_str = ', '.join(team_allocation_list)  # Save as CSV string
 
         with connection.cursor() as cursor:
             cursor.execute("""
@@ -22,13 +26,20 @@ def add_project_view(request):
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, [
                 name, website_category, number_of_publications,
-                domain_authority, domain_rating, team_allocation,
+                domain_authority, domain_rating, team_allocation_str,
                 geolocation, targets
             ])
-
         return redirect('/dashboard/')
 
-    return render(request, 'add_project.html')
+    # fetch all usernames for dropdown
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT username FROM add_user")
+        users = [row[0] for row in cursor.fetchall()]
+
+    return render(request, 'add_project.html', {'users': users})
+
+
+
 
 
 @login_required
@@ -82,4 +93,9 @@ def add_in_existing_project_view(request):
 
         return redirect('/dashboard/')
 
-    return render(request, 'add_in_existing_project.html')
+    # Fetch project names from add_new_project
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT name FROM add_new_project")
+        project_names = [row[0] for row in cursor.fetchall()]
+
+    return render(request, 'add_in_existing_project.html', {'project_names': project_names})

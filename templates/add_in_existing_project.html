@@ -40,10 +40,13 @@
                 <label>Month</label>
                 <input type="text" name="month" class="form-control" placeholder="e.g. August">
             </div>
-            <div class="col-md-6">
-                <label>Project Name</label>
-                <input type="text" name="project_name" class="form-control" placeholder="Enter project name">
-            </div>
+            <label>Project Name</label>
+<select name="project_name" class="form-select" required>
+    <option value="" disabled selected>-- Select Project --</option>
+    {% for project in project_names %}
+        <option value="{{ project }}">{{ project }}</option>
+    {% endfor %}
+</select>
         </div>
 
         <label>Publication Site</label>

@@ -105,4 +105,3 @@ def user_dashboard_view(request):
         'bar_chart_data': bar_chart_data,
         'table_data': table_data,
     })
-    

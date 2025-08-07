@@ -26,6 +26,9 @@
             margin-top: 15px;
             font-weight: 600;
         }
+        select[multiple] {
+            height: auto;
+        }
     </style>
 </head>
 <body>
@@ -39,14 +42,7 @@
         <input type="text" name="name" class="form-control" placeholder="Enter project name" required>
 
         <label>Website Category</label>
-        <select name="website_category" class="form-select" required>
-            <option value="" disabled selected>Select website category</option>
-            <option value="Tech">Tech</option>
-            <option value="Education">Education</option>
-            <option value="Business">Business</option>
-            <option value="Lifestyle">Lifestyle</option>
-            <!-- Add more if needed -->
-        </select>
+        <input type="text" name="website_category" class="form-control" placeholder="Enter website category" required>
 
         <label>Number of Publications</label>
         <input type="number" name="number_of_publications" class="form-control" placeholder="Enter number of publications" required>
@@ -63,10 +59,18 @@
         </div>
 
         <label>Team Allocation</label>
-        <input type="text" name="team_allocation" class="form-control" placeholder="Select team members" required>
+<select name="team_allocation[]" class="form-select" multiple required>
+    {% for user in users %}
+        <option value="{{ user }}">{{ user }}</option>
+    {% endfor %}
+</select>
+<div class="mb-2">
+    <small class="form-text text-muted d-block">Hold Ctrl (Windows) or Cmd (Mac) to select multiple users</small>
+</div>
 
-        <label>Geolocation</label>
-        <input type="text" name="geolocation" class="form-control" placeholder="Enter target location" required>
+<label class="mt-3">Geolocation</label>
+<input type="text" name="geolocation" class="form-control" placeholder="Enter target location" required>
+
 
         <label>Targets</label>
         <input type="text" name="targets" class="form-control" placeholder="Enter project targets" required>
