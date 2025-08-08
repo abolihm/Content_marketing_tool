@@ -36,72 +36,77 @@ def add_user_view(request):
 
 @login_required
 def user_dashboard_view(request):
-    username = request.user.username
+    # Selected user from GET
+    selected_user = request.GET.get('user', '')
 
+    # 1️⃣ Get all usernames for dropdown
     with connection.cursor() as cursor:
+        cursor.execute("SELECT DISTINCT username FROM add_user")
+        users = [row[0] for row in cursor.fetchall()]
 
-        # ✅ Total projects from project table
-        cursor.execute("""
-            SELECT COUNT(DISTINCT project_name)
-            FROM add_in_existing_project
-            WHERE blogger_name = %s
-        """, [username])
-        total_projects = cursor.fetchone()[0]
+    if not selected_user and users:
+        selected_user = users[0]
 
-        # ✅ Allocated Links
+    # 2️⃣ Get project names for selected user from add_new_project
+    with connection.cursor() as cursor:
         cursor.execute("""
-            SELECT COUNT(*) FROM add_in_existing_project
-            WHERE blogger_name = %s
-        """, [username])
-        allocated_links = cursor.fetchone()[0]
+            SELECT name
+            FROM add_new_project
+            WHERE %s = ANY (string_to_array(team_allocation, ','))
+        """, [selected_user])
+        project_names = [row[0] for row in cursor.fetchall()]
 
-        # ✅ Live Links
-        cursor.execute("""
-            SELECT COUNT(*) FROM add_in_existing_project
-            WHERE blogger_name = %s AND status = 'Live'
-        """, [username])
-        live_links = cursor.fetchone()[0]
+    if not project_names:
+        return render(request, 'user_dashboard.html', {
+            'users': users,
+            'selected_user': selected_user,
+            'total_projects': 0,
+            'allocated_links': 0,
+            'live_links': 0,
+            'pending_links': 0,
+            'bar_chart_data': [],
+            'table_data': [],
+        })
 
-        # ✅ Pending Links
-        cursor.execute("""
-            SELECT COUNT(*) FROM add_in_existing_project
-            WHERE blogger_name = %s AND status = 'Pending'
-        """, [username])
-        pending_links = cursor.fetchone()[0]
-
-        # ✅ Bar chart (Project vs Status Count)
-        cursor.execute("""
+    # 3️⃣ Get chart data from add_in_existing_project
+    with connection.cursor() as cursor:
+        cursor.execute(f"""
             SELECT 
                 project_name,
-                COUNT(*) FILTER (WHERE status = 'Allocated') as allocated,
-                COUNT(*) FILTER (WHERE status = 'Live') as live,
-                COUNT(*) FILTER (WHERE status = 'Pending') as pending
+                COUNT(*) FILTER (WHERE status IS NOT NULL) AS allocated,
+                COUNT(*) FILTER (WHERE status = 'Live') AS live,
+                COUNT(*) FILTER (WHERE status = 'Pending') AS pending
             FROM add_in_existing_project
-            WHERE blogger_name = %s
+            WHERE project_name IN %s
             GROUP BY project_name
-        """, [username])
+        """, [tuple(project_names)])
         bar_chart_data = cursor.fetchall()
 
-        # ✅ Table data
+    # 4️⃣ Get table data from add_in_existing_project
+    with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
-                month, project_name, publication_site, keyword_1, url_page_1, 
-                keyword_2, url_page_2, live_url, live_url_date, status, price,
-                invoice_number, invoice_link, blogger_name, est_number, 
-                billed_status, client_invoice_no, collected_status, 
-                payment_status, released_date, transaction_id
+                project_name, publication_site, month, keyword_1, url_page_1, 
+                keyword_2, url_page_2, status, live_url, live_url_date,
+                price, invoice_number, invoice_link, blogger_name, 
+                billed_status, client_invoice_no, collected_status, payment_status, released_date, transaction_id
             FROM add_in_existing_project
-            WHERE blogger_name = %s
-        """, [username])
-        columns = [col[0] for col in cursor.description]
-        table_data = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            WHERE project_name IN %s
+        """, [tuple(project_names)])
+        table_data = [
+            dict(zip([col[0] for col in cursor.description], row))
+            for row in cursor.fetchall()
+        ]
 
-    return render(request, 'user_dashboard.html', {
-        'username': username,
-        'total_projects': total_projects,
-        'allocated_links': allocated_links,
-        'live_links': live_links,
-        'pending_links': pending_links,
+    context = {
+        'users': users,
+        'selected_user': selected_user,
+        'total_projects': len(project_names),
+        'allocated_links': sum(row[1] for row in bar_chart_data),
+        'live_links': sum(row[2] for row in bar_chart_data),
+        'pending_links': sum(row[3] for row in bar_chart_data),
         'bar_chart_data': bar_chart_data,
         'table_data': table_data,
-    })
+    }
+
+    return render(request, 'user_dashboard.html', context)

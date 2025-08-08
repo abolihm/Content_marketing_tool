@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>{{ username }}'s Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>{{ selected_user }}'s Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -32,6 +32,9 @@
             font-size: 16px;
             color: #777;
         }
+        .chart-options {
+            margin-bottom: 20px;
+        }
         .chart-container {
             margin-bottom: 50px;
             background-color: #fff;
@@ -59,7 +62,17 @@
 </head>
 <body>
 
-    <h1>{{ username }}'s Dashboard</h1>
+    <h1>{{ selected_user }}'s Dashboard</h1>
+
+    <!-- User Selection Form -->
+    <form method="get" style="margin-bottom: 20px;">
+        <label for="user"><strong>Select User:</strong></label>
+        <select name="user" id="user" onchange="this.form.submit()">
+            {% for user in users %}
+                <option value="{{ user }}" {% if user == selected_user %}selected{% endif %}>{{ user }}</option>
+            {% endfor %}
+        </select>
+    </form>
 
     <!-- Summary Cards -->
     <div class="cards">
@@ -81,10 +94,20 @@
         </div>
     </div>
 
-    <!-- Bar Chart -->
+    <!-- Chart Type Selector -->
+    <div class="chart-options">
+        <label for="chartType"><strong>Choose Chart Type:</strong></label>
+        <select id="chartType" onchange="renderChart()">
+            <option value="bar">Bar</option>
+            <option value="line">Line</option>
+            <option value="pie">Pie</option>
+        </select>
+    </div>
+
+    <!-- ECharts Container -->
     <div class="chart-container">
         <h3>Project Performance</h3>
-        <canvas id="projectChart"></canvas>
+        <div id="echartContainer" style="height: 400px; width: 100%;"></div>
     </div>
 
     <!-- Link Table -->
@@ -132,47 +155,53 @@
         </tbody>
     </table>
 
-    <!-- Chart.js Script -->
+    <!-- ECharts Script -->
     <script>
-        const ctx = document.getElementById('projectChart').getContext('2d');
-        const projectChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: [
-                    {% for row in bar_chart_data %}
-                        "{{ row.0 }}",
-                    {% endfor %}
-                ],
-                datasets: [
-                    {
-                        label: 'Allocated',
-                        backgroundColor: '#a78bfa',
-                        data: [{% for row in bar_chart_data %}{{ row.1 }},{% endfor %}]
-                    },
-                    {
-                        label: 'Live',
-                        backgroundColor: '#34d399',
-                        data: [{% for row in bar_chart_data %}{{ row.2 }},{% endfor %}]
-                    },
-                    {
-                        label: 'Pending',
-                        backgroundColor: '#fbbf24',
-                        data: [{% for row in bar_chart_data %}{{ row.3 }},{% endfor %}]
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    },
-                    title: {
-                        display: false
-                    }
-                }
+        const chartData = {
+            labels: [{% for row in bar_chart_data %}"{{ row.0 }}",{% endfor %}],
+            allocated: [{% for row in bar_chart_data %}{{ row.1 }},{% endfor %}],
+            live: [{% for row in bar_chart_data %}{{ row.2 }},{% endfor %}],
+            pending: [{% for row in bar_chart_data %}{{ row.3 }},{% endfor %}]
+        };
+
+        const chart = echarts.init(document.getElementById('echartContainer'));
+
+        function renderChart() {
+            const type = document.getElementById('chartType').value;
+
+            let option = {
+                tooltip: { trigger: 'axis' },
+                legend: { data: ['Allocated', 'Live', 'Pending'] },
+                xAxis: { type: 'category', data: chartData.labels },
+                yAxis: { type: 'value' },
+                series: []
+            };
+
+            if (type === 'bar' || type === 'line') {
+                option.series = [
+                    { name: 'Allocated', type: type, data: chartData.allocated },
+                    { name: 'Live', type: type, data: chartData.live },
+                    { name: 'Pending', type: type, data: chartData.pending }
+                ];
+            } else if (type === 'pie') {
+                option = {
+                    tooltip: { trigger: 'item' },
+                    legend: { top: 'bottom' },
+                    series: [{
+                        name: 'Total Links',
+                        type: 'pie',
+                        radius: '50%',
+                        data: chartData.labels.map((label, idx) => ({
+                            name: label,
+                            value: chartData.allocated[idx] + chartData.live[idx] + chartData.pending[idx]
+                        }))
+                    }]
+                };
             }
-        });
+            chart.setOption(option);
+        }
+
+        renderChart(); // Initial chart
     </script>
 
 </body>

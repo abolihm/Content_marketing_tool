@@ -4,7 +4,6 @@ from django.db import connection
 
 
 @login_required
-@login_required
 def add_project_view(request):
     if request.method == 'POST':
         name = request.POST['name']
@@ -71,7 +70,7 @@ def add_in_existing_project_view(request):
 
         with connection.cursor() as cursor:
             cursor.execute("""
-                INSERT INTO add_existing_project (
+                INSERT INTO add_in_existing_project (
                     month, project_name, publication_site,
                     keyword_1, url_page_1, keyword_2, url_page_2,
                     live_url, live_url_date, status, price,
