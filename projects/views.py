@@ -97,4 +97,4 @@ def add_in_existing_project_view(request):
         cursor.execute("SELECT name FROM add_new_project")
         project_names = [row[0] for row in cursor.fetchall()]
 
-    return render(request, 'add_in_existing_project.html', {'project_names': project_names})
+    return render(request, 'add_in_existing_project.html', {'project_names': project_names})    
