@@ -11,26 +11,17 @@ def dashboard(request):
 def add_user_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
-        number_of_projects = request.POST.get('number_of_projects')
-        project_category = request.POST.get('project_category')
-        number_of_publications = request.POST.get('number_of_publications')
+        email_id = request.POST.get('email_id')
 
         with connection.cursor() as cursor:
             cursor.execute("""
-                INSERT INTO add_user 
-                (username, number_of_projects, project_category, number_of_publications)
-                VALUES (%s, %s, %s, %s)
-            """, [
-                username,
-                int(number_of_projects),
-                project_category,
-                int(number_of_publications)
-            ])
+                INSERT INTO add_user (username, email_id)
+                VALUES (%s, %s)
+            """, [username, email_id])
 
         return redirect('/dashboard/')
 
     return render(request, 'add_user.html')
-
 
 
 
