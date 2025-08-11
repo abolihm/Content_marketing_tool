@@ -7,8 +7,7 @@ from django.db import connection
 def add_project_view(request):
     if request.method == 'POST':
         name = request.POST['name']
-        website_category = request.POST['website_category']
-        number_of_publications = request.POST['number_of_publications']
+        project_category = request.POST['project_category']
         domain_authority = request.POST['domain_authority']
         domain_rating = request.POST['domain_rating']
         geolocation = request.POST['geolocation']
@@ -21,11 +20,11 @@ def add_project_view(request):
         with connection.cursor() as cursor:
             cursor.execute("""
                 INSERT INTO add_new_project 
-                (name, website_category, number_of_publications, domain_authority, domain_rating, team_allocation, geolocation, targets)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                (name, project_category, domain_authority, domain_rating, team_allocation, geolocation, targets)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, [
-                name, website_category, number_of_publications,
-                domain_authority, domain_rating, team_allocation_str,
+                name, project_category, domain_authority,
+                domain_rating, team_allocation_str,
                 geolocation, targets
             ])
         return redirect('/dashboard/')

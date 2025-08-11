@@ -12,38 +12,31 @@
       background-color: #f1f5ff;
       font-family: 'Segoe UI', sans-serif;
     }
-
     .form-container {
       background-color: white;
       border-radius: 16px;
       padding: 40px;
-      max-width: 600px;
+      max-width: 500px;
       margin: 60px auto;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
     }
-
     .form-label {
       font-weight: 600;
-      margin-bottom: 6px;
     }
-
-    .form-control, .form-select {
+    .form-control {
       border-radius: 10px;
-      height: 45px;
+      min-height: 45px;
     }
-
     .btn-primary {
       background-color: #2563eb;
       border: none;
       border-radius: 10px;
       font-weight: 600;
-      height: 45px;
+      min-height: 45px;
     }
-
     .btn-primary:hover {
       background-color: #1e40af;
     }
-
     h2 {
       font-weight: 700;
       margin-bottom: 30px;
@@ -53,37 +46,19 @@
 <body>
   <div class="form-container">
     <h2>Add New User</h2>
-    <form method="post">
-      {% csrf_token %}
 
+    <!-- Add User Form -->
+    <form method="POST">
+      {% csrf_token %}
+      
       <div class="mb-3">
         <label class="form-label">Username</label>
         <input type="text" name="username" class="form-control" placeholder="Enter username" required>
       </div>
 
       <div class="mb-3">
-        <label class="form-label">Projects</label>
-        <select name="number_of_projects" class="form-select" required>
-          <option value="" selected disabled>Select number of projects</option>
-          {% for i in "12345" %}
-            <option value="{{ i }}">{{ i }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label">Project Category</label>
-        <select name="project_category" class="form-select" required>
-          <option value="" selected disabled>Select project category</option>
-          <option value="SEO">SEO</option>
-          <option value="Content Marketing">Content Marketing</option>
-          <option value="Social Media">Social Media</option>
-        </select>
-      </div>
-
-      <div class="mb-4">
-        <label class="form-label">Number of Publications</label>
-        <input type="number" name="number_of_publications" class="form-control" placeholder="Enter number of publications" required>
+        <label class="form-label">Email ID</label>
+        <input type="email" name="email_id" class="form-control" placeholder="Enter email address" required>
       </div>
 
       <button type="submit" class="btn btn-primary w-100">Add User</button>
