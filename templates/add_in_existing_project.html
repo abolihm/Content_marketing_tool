@@ -30,23 +30,38 @@
 </head>
 <body>
 
+<h1 class="text-center">Add to Existing Project</h1>
+
 <div class="form-container">
-    <h4 class="mb-4">Add to Existing Project</h4>
     <form method="POST">
         {% csrf_token %}
 
+        <!-- User selection -->
+        <label for="username"><strong>Select User:</strong></label>
+        <select name="username" required>
+  <option value="">Select Username</option>
+  {% for user in users %}
+    <option value="{{ user }}">{{ user }}</option>
+  {% endfor %}
+</select>
+
+        <!-- Month -->
         <div class="row">
             <div class="col-md-6">
                 <label>Month</label>
                 <input type="text" name="month" class="form-control" placeholder="e.g. August">
             </div>
-            <label>Project Name</label>
-<select name="project_name" class="form-select" required>
-    <option value="" disabled selected>-- Select Project --</option>
-    {% for project in project_names %}
-        <option value="{{ project }}">{{ project }}</option>
-    {% endfor %}
-</select>
+
+            <!-- Project name -->
+            <div class="col-md-6">
+                <label>Project Name</label>
+                <select name="project_name" class="form-select" required>
+                    <option value="" disabled selected>-- Select Project --</option>
+                    {% for project in project_names %}
+                        <option value="{{ project }}">{{ project }}</option>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
 
         <label>Publication Site</label>

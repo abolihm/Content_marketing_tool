@@ -3,6 +3,11 @@ from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from django.shortcuts import redirect
 from users.views import dashboard
+from django.shortcuts import render
+
+
+
+
 
 urlpatterns = [
     path('', lambda request: redirect('dashboard/')),
@@ -13,4 +18,6 @@ urlpatterns = [
     path('add-user/', include('users.urls')),
     path('add-existing/', include('projects.urls')), 
     path('user-dashboard/', include('users.urls')),
+    path('no_permission/', include ('users.urls')),
+    path('not_permission/', include ('projects.urls')),
 ]

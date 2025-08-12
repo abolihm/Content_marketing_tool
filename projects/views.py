@@ -1,6 +1,8 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.db import connection
+from .decorators import role_required
+
 
 
 @login_required
@@ -39,11 +41,11 @@ def add_project_view(request):
 
 
 
-
 @login_required
 def add_in_existing_project_view(request):
     if request.method == 'POST':
         data = {
+            'username': request.POST.get('username'),  # New username field
             'month': request.POST.get('month'),
             'project_name': request.POST.get('project_name'),
             'publication_site': request.POST.get('publication_site'),
@@ -70,7 +72,7 @@ def add_in_existing_project_view(request):
         with connection.cursor() as cursor:
             cursor.execute("""
                 INSERT INTO add_in_existing_project (
-                    month, project_name, publication_site,
+                    username, month, project_name, publication_site,
                     keyword_1, url_page_1, keyword_2, url_page_2,
                     live_url, live_url_date, status, price,
                     invoice_number, invoice_link, blogger_name,
@@ -79,7 +81,7 @@ def add_in_existing_project_view(request):
                     transaction_id
                 )
                 VALUES (
-                    %(month)s, %(project_name)s, %(publication_site)s,
+                    %(username)s, %(month)s, %(project_name)s, %(publication_site)s,
                     %(keyword_1)s, %(url_page_1)s, %(keyword_2)s, %(url_page_2)s,
                     %(live_url)s, %(live_url_date)s, %(status)s, %(price)s,
                     %(invoice_number)s, %(invoice_link)s, %(blogger_name)s,
@@ -89,11 +91,29 @@ def add_in_existing_project_view(request):
                 )
             """, data)
 
+            cursor.execute("""
+            INSERT INTO add_in_existing_project (username)
+            VALUES (%s)
+        """, [data['username']])
+
         return redirect('/dashboard/')
 
-    # Fetch project names from add_new_project
+    # Fetch usernames for dropdown
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT username FROM add_user")
+        users = [row[0] for row in cursor.fetchall()]
+
+    # Fetch project names
     with connection.cursor() as cursor:
         cursor.execute("SELECT name FROM add_new_project")
         project_names = [row[0] for row in cursor.fetchall()]
 
-    return render(request, 'add_in_existing_project.html', {'project_names': project_names})    
+    return render(request, 'add_in_existing_project.html', {
+        'users': users,
+        'project_names': project_names
+    })
+
+
+
+def not_permission_view(request):
+    return render(request, 'no_permission.html')

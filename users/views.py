@@ -2,10 +2,12 @@ from django.shortcuts import render, redirect
 from django.db import connection
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import login_required
+from .decorators import role_required
 
 @login_required
 def dashboard(request):
     return render(request, 'dashboard.html')
+
 
 @login_required
 def add_user_view(request):
@@ -27,18 +29,17 @@ def add_user_view(request):
 
 @login_required
 def user_dashboard_view(request):
-    # Selected user from GET
     selected_user = request.GET.get('user', '')
 
-    # 1️⃣ Get all usernames for dropdown
+    # Fetch distinct usernames from add_in_existing_project
     with connection.cursor() as cursor:
-        cursor.execute("SELECT DISTINCT username FROM add_user")
+        cursor.execute("SELECT DISTINCT username FROM add_in_existing_project")
         users = [row[0] for row in cursor.fetchall()]
 
     if not selected_user and users:
         selected_user = users[0]
 
-    # 2️⃣ Get project names for selected user from add_new_project
+    # Fetch project names for selected user from add_new_project
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT name
@@ -59,9 +60,9 @@ def user_dashboard_view(request):
             'table_data': [],
         })
 
-    # 3️⃣ Get chart data from add_in_existing_project
+    # Get chart data from add_in_existing_project
     with connection.cursor() as cursor:
-        cursor.execute(f"""
+        cursor.execute("""
             SELECT 
                 project_name,
                 COUNT(*) FILTER (WHERE status IS NOT NULL) AS allocated,
@@ -73,7 +74,7 @@ def user_dashboard_view(request):
         """, [tuple(project_names)])
         bar_chart_data = cursor.fetchall()
 
-    # 4️⃣ Get table data from add_in_existing_project
+    # Get table data from add_in_existing_project
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
@@ -101,3 +102,7 @@ def user_dashboard_view(request):
     }
 
     return render(request, 'user_dashboard.html', context)
+
+
+def no_permission_view(request):
+    return render(request, 'no_permission.html')
