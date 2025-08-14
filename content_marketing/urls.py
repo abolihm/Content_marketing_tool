@@ -17,7 +17,9 @@ urlpatterns = [
     path('dashboard/', dashboard, name='dashboard'),
     path('add-user/', include('users.urls')),
     path('add-existing/', include('projects.urls')), 
+    path('publication-site/', include('users.urls')),
     path('user-dashboard/', include('users.urls')),
     path('no_permission/', include ('users.urls')),
     path('not_permission/', include ('projects.urls')),
+   
 ]

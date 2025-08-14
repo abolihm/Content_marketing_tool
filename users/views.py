@@ -3,6 +3,8 @@ from django.db import connection
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import login_required
 from .decorators import role_required
+from django.urls import path
+from . import views
 
 @login_required
 def dashboard(request):
@@ -106,3 +108,54 @@ def user_dashboard_view(request):
 
 def no_permission_view(request):
     return render(request, 'no_permission.html')
+
+
+def publication_list_view(request):
+    if request.method == "POST":
+        site_id = request.POST.get("id")
+        updates = {
+            'domain': request.POST.get('domain'),
+            'category': request.POST.get('category'),
+            'dr': request.POST.get('dr'),
+            'da': request.POST.get('da'),
+            'spam_score': request.POST.get('spam_score'),
+            'similarweb_traffic': request.POST.get('similarweb_traffic'),
+            'indian_traffic': request.POST.get('indian_traffic'),
+            'traffic_graph': request.POST.get('traffic_graph'),
+            'country': request.POST.get('country'),
+            'index_pages': request.POST.get('index_pages'),
+            'hm_score': request.POST.get('hm_score'),
+            'price': request.POST.get('price'),
+            'link_type': request.POST.get('link_type'),
+        }
+
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                UPDATE publication_sites
+                SET domain=%s, category=%s, dr=%s, da=%s, spam_score=%s,
+                    similarweb_traffic=%s, indian_traffic=%s, traffic_graph=%s,
+                    country=%s, index_pages=%s, hm_score=%s, price=%s, link_type=%s
+                WHERE id=%s
+            """, [
+                updates['domain'], updates['category'], updates['dr'], updates['da'], updates['spam_score'],
+                updates['similarweb_traffic'], updates['indian_traffic'], updates['traffic_graph'],
+                updates['country'], updates['index_pages'], updates['hm_score'], updates['price'], updates['link_type'],
+                site_id
+            ])
+
+        return redirect('publication_list')
+
+    # Fetch all data
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM publication_sites")
+        rows = cursor.fetchall()
+
+    columns = [
+        'id','domain', 'category', 'dr', 'da', 'spam_score', 
+        'similarweb_traffic', 'indian_traffic', 'traffic_graph',
+        'country', 'index_pages', 'hm_score', 'price', 'link_type'
+    ]
+    sites = [dict(zip(columns, row)) for row in rows]
+
+    return render(request, 'publication_list.html', {'sites': sites})
+
