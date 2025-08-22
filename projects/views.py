@@ -44,8 +44,19 @@ def add_project_view(request):
 @login_required
 def add_in_existing_project_view(request):
     if request.method == 'POST':
+        price_value = request.POST.get('price')
+        price_currency = request.POST.get('price_currency')
+
+        # Convert to symbol form
+        if price_currency == "INR":
+            price = f"₹{price_value}" if price_value else None
+        elif price_currency == "USD":
+            price = f"${price_value}" if price_value else None
+        else:
+            price = price_value  # fallback
+
         data = {
-            'username': request.POST.get('username'),  # New username field
+            'username': request.POST.get('username'),
             'month': request.POST.get('month'),
             'project_name': request.POST.get('project_name'),
             'publication_site': request.POST.get('publication_site'),
@@ -56,7 +67,7 @@ def add_in_existing_project_view(request):
             'live_url': request.POST.get('live_url'),
             'live_url_date': request.POST.get('live_url_date') or None,
             'status': request.POST.get('status'),
-            'price': request.POST.get('price'),
+            'price': price,
             'invoice_number': request.POST.get('invoice_number'),
             'invoice_link': request.POST.get('invoice_link'),
             'blogger_name': request.POST.get('blogger_name'),
@@ -91,11 +102,6 @@ def add_in_existing_project_view(request):
                 )
             """, data)
 
-            cursor.execute("""
-            INSERT INTO add_in_existing_project (username)
-            VALUES (%s)
-        """, [data['username']])
-
         return redirect('/dashboard/')
 
     # Fetch usernames for dropdown
@@ -113,7 +119,3 @@ def add_in_existing_project_view(request):
         'project_names': project_names
     })
 
-
-
-def not_permission_view(request):
-    return render(request, 'no_permission.html')

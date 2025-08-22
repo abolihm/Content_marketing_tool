@@ -32,8 +32,61 @@ def add_user_view(request):
 @login_required
 def user_dashboard_view(request):
     selected_user = request.GET.get('user', '')
+    selected_project = request.GET.get('project', '')
+    selected_month = request.GET.get('month', '')
 
-    # Fetch distinct usernames from add_in_existing_project
+    # --- Handle Edit/Update ---
+    if request.method == "POST":
+        row_id = request.POST.get("id")  # unique id column in add_in_existing_project
+
+        updates = {
+            'project_name': request.POST.get('project_name'),
+            'publication_site': request.POST.get('publication_site'),
+            'month': request.POST.get('month'),
+            'keyword_1': request.POST.get('keyword_1'),
+            'url_page_1': request.POST.get('url_page_1'),
+            'keyword_2': request.POST.get('keyword_2'),
+            'url_page_2': request.POST.get('url_page_2'),
+            'status': request.POST.get('status'),
+            'live_url': request.POST.get('live_url'),
+            'live_url_date': request.POST.get('live_url_date') or None,
+            'price': request.POST.get('price'),
+            'invoice_number': request.POST.get('invoice_number'),
+            'invoice_link': request.POST.get('invoice_link'),
+            'blogger_name': request.POST.get('blogger_name'),
+            'billed_status': request.POST.get('billed_status'),
+            'client_invoice_no': request.POST.get('client_invoice_no'),
+            'collected_status': request.POST.get('collected_status'),
+            'payment_status': request.POST.get('payment_status'),
+            'released_date': request.POST.get('released_date') or None,
+            'transaction_id': request.POST.get('transaction_id'),
+        }
+
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                UPDATE add_in_existing_project
+                SET project_name=%s, publication_site=%s, month=%s,
+                    keyword_1=%s, url_page_1=%s,
+                    keyword_2=%s, url_page_2=%s,
+                    status=%s, live_url=%s, live_url_date=%s,
+                    price=%s, invoice_number=%s, invoice_link=%s,
+                    blogger_name=%s, billed_status=%s,
+                    client_invoice_no=%s, collected_status=%s,
+                    payment_status=%s, released_date=%s, transaction_id=%s
+                WHERE id=%s
+            """, [
+                updates['project_name'], updates['publication_site'], updates['month'],
+                updates['keyword_1'], updates['url_page_1'], updates['keyword_2'], updates['url_page_2'],
+                updates['status'], updates['live_url'], updates['live_url_date'], updates['price'],
+                updates['invoice_number'], updates['invoice_link'], updates['blogger_name'],
+                updates['billed_status'], updates['client_invoice_no'], updates['collected_status'],
+                updates['payment_status'], updates['released_date'], updates['transaction_id'],
+                row_id
+            ])
+
+        return redirect('user-dashboard')  # reload after update
+
+    # --- Fetch dropdown users ---
     with connection.cursor() as cursor:
         cursor.execute("SELECT DISTINCT username FROM add_in_existing_project")
         users = [row[0] for row in cursor.fetchall()]
@@ -41,7 +94,7 @@ def user_dashboard_view(request):
     if not selected_user and users:
         selected_user = users[0]
 
-    # Fetch project names for selected user from add_new_project
+    # --- Fetch projects for selected user ---
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT name
@@ -54,6 +107,10 @@ def user_dashboard_view(request):
         return render(request, 'user_dashboard.html', {
             'users': users,
             'selected_user': selected_user,
+            'projects': [],
+            'selected_project': '',
+            'months': [],
+            'selected_month': '',
             'total_projects': 0,
             'allocated_links': 0,
             'live_links': 0,
@@ -62,7 +119,17 @@ def user_dashboard_view(request):
             'table_data': [],
         })
 
-    # Get chart data from add_in_existing_project
+    # --- Fetch distinct months for dropdown ---
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT DISTINCT month
+            FROM add_in_existing_project
+            WHERE project_name IN %s
+            ORDER BY month
+        """, [tuple(project_names)])
+        months = [row[0] for row in cursor.fetchall() if row[0]]
+
+    # --- Fetch chart data ---
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
@@ -76,17 +143,30 @@ def user_dashboard_view(request):
         """, [tuple(project_names)])
         bar_chart_data = cursor.fetchall()
 
-    # Get table data from add_in_existing_project
+    # --- Fetch table data ---
+    where_clauses = ["project_name IN %s"]
+    params = [tuple(project_names)]
+
+    if selected_project:
+        where_clauses.append("project_name = %s")
+        params.append(selected_project)
+
+    if selected_month:
+        where_clauses.append("month = %s")
+        params.append(selected_month)
+
+    query = f"""
+        SELECT id, project_name, publication_site, month, keyword_1, url_page_1, 
+               keyword_2, url_page_2, status, live_url, live_url_date,
+               price, invoice_number, invoice_link, blogger_name, 
+               billed_status, client_invoice_no, collected_status, 
+               payment_status, released_date, transaction_id
+        FROM add_in_existing_project
+        WHERE {" AND ".join(where_clauses)}
+    """
+
     with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT 
-                project_name, publication_site, month, keyword_1, url_page_1, 
-                keyword_2, url_page_2, status, live_url, live_url_date,
-                price, invoice_number, invoice_link, blogger_name, 
-                billed_status, client_invoice_no, collected_status, payment_status, released_date, transaction_id
-            FROM add_in_existing_project
-            WHERE project_name IN %s
-        """, [tuple(project_names)])
+        cursor.execute(query, params)
         table_data = [
             dict(zip([col[0] for col in cursor.description], row))
             for row in cursor.fetchall()
@@ -95,6 +175,10 @@ def user_dashboard_view(request):
     context = {
         'users': users,
         'selected_user': selected_user,
+        'projects': project_names,
+        'selected_project': selected_project,
+        'months': months,
+        'selected_month': selected_month,
         'total_projects': len(project_names),
         'allocated_links': sum(row[1] for row in bar_chart_data),
         'live_links': sum(row[2] for row in bar_chart_data),
@@ -106,13 +190,13 @@ def user_dashboard_view(request):
     return render(request, 'user_dashboard.html', context)
 
 
-def no_permission_view(request):
-    return render(request, 'no_permission.html')
 
 
 def publication_list_view(request):
+    # --- Handle Edit/Update ---
     if request.method == "POST":
         site_id = request.POST.get("id")
+
         updates = {
             'domain': request.POST.get('domain'),
             'category': request.POST.get('category'),
@@ -139,23 +223,93 @@ def publication_list_view(request):
             """, [
                 updates['domain'], updates['category'], updates['dr'], updates['da'], updates['spam_score'],
                 updates['similarweb_traffic'], updates['indian_traffic'], updates['traffic_graph'],
-                updates['country'], updates['index_pages'], updates['hm_score'], updates['price'], updates['link_type'],
-                site_id
+                updates['country'], updates['index_pages'], updates['hm_score'], updates['price'],
+                updates['link_type'], site_id
             ])
 
-        return redirect('publication_list')
+        return redirect("publication_list")  # reload after saving
 
-    # Fetch all data
+    # --- Handle Filtering ---
+    category_filter = request.GET.get("category", "")
+    limit = int(request.GET.get("limit", 50))  # Default 50 rows
+
+    query = "SELECT * FROM publication_sites"
+    params = []
+
+    if category_filter:
+        query += " WHERE category = %s"
+        params.append(category_filter)
+
+    query += " LIMIT %s"
+    params.append(limit)
+
     with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM publication_sites")
+        cursor.execute(query, params)
         rows = cursor.fetchall()
 
     columns = [
-        'id','domain', 'category', 'dr', 'da', 'spam_score', 
+        'id', 'domain', 'category', 'dr', 'da', 'spam_score',
         'similarweb_traffic', 'indian_traffic', 'traffic_graph',
         'country', 'index_pages', 'hm_score', 'price', 'link_type'
     ]
     sites = [dict(zip(columns, row)) for row in rows]
 
-    return render(request, 'publication_list.html', {'sites': sites})
+    # Get categories for filter dropdown
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT DISTINCT category FROM publication_sites")
+        categories = [row[0] for row in cursor.fetchall() if row[0]]
 
+    return render(request, "publication_list.html", {
+        "sites": sites,
+        "categories": categories,
+        "selected_category": category_filter,
+        "selected_limit": limit,
+        "limit_options": [50, 100, 200, 500]
+    })
+
+
+def dashboard_view(request):
+    # ---------- Publication Sites ----------
+    with connection.cursor() as cursor:
+        # Avg DA
+        cursor.execute("SELECT AVG(da) FROM publication_sites")
+        avg_da = round(cursor.fetchone()[0] or 0, 2)
+
+        # Avg DR
+        cursor.execute("SELECT AVG(dr) FROM publication_sites")
+        avg_dr = round(cursor.fetchone()[0] or 0, 2)
+
+        # Total Sites
+        cursor.execute("SELECT COUNT(domain) FROM publication_sites")
+        total_sites = cursor.fetchone()[0] or 0
+
+        # Categories → Count per category
+        cursor.execute("""
+            SELECT category, COUNT(*) 
+            FROM publication_sites 
+            WHERE category IS NOT NULL 
+            GROUP BY category 
+            ORDER BY COUNT(*) DESC
+        """)
+        cat_rows = cursor.fetchall()
+        categories = [row[0] for row in cat_rows]
+        category_counts = [row[1] for row in cat_rows]
+
+    # ---------- User Allocations ----------
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT username, COUNT(*) AS allocations FROM add_in_existing_project GROUP BY username;
+        """)
+        user_rows = cursor.fetchall()
+        usernames = [row[0] for row in user_rows]
+        user_counts = [row[1] for row in user_rows]
+
+    return render(request, "dashboard.html", {
+        "avg_da": avg_da,
+        "avg_dr": avg_dr,
+        "total_sites": total_sites,
+        "categories": categories,
+        "category_counts": category_counts,
+        "usernames": usernames,
+        "user_counts": user_counts,
+    })

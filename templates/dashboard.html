@@ -1,20 +1,113 @@
 {% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Dashboard</title>
-  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <meta charset="UTF-8">
+  <title>Overview</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background-color: #f5f7fb; }
+    .sidebar {
+      position: fixed; top: 0; left: 0; height: 100%; width: 220px;
+      background-color: #2c3e50; padding-top: 20px; color: #fff;
+    }
+    .sidebar h2 { font-size: 20px; font-weight: bold; margin-bottom: 30px; text-align: center; }
+    .sidebar a {
+      display: block; padding: 12px 20px; color: #fff; text-decoration: none;
+      font-size: 15px; transition: background 0.3s;
+    }
+    .sidebar a:hover { background-color: #34495e; border-radius: 4px; }
+    .content { margin-left: 240px; padding: 30px; }
+    .card { border: none; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+    .metric { font-size: 28px; font-weight: bold; color: #2d3436; }
+    .metric-label { font-size: 14px; color: #636e72; }
+    h3 { font-weight: 600; font-size: 18px; margin-bottom: 15px; }
+  </style>
 </head>
 <body>
-<div class="container">
-  <h1>Welcome, {{ request.user.username }}</h1>
-  <p><a href="{% url 'add-user' %}">Add User</a></p>
-  <p><a href="{% url 'add-project' %}">Add Project</a></p>
-  <p><a href="{% url 'add-in-existing-project' %}">Add In Existing Project</a></p>
-  <p><a href="{% url 'publication_list' %}">Publication Sites</a></p>
-  <p><a href="{% url 'user-dashboard' %}">User Dashboard</a></p>
-  <p><a href="{% url 'logout' %}">Logout</a></p>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <h2>📌 Dashboard</h2>
+    <a href="{% url 'add-user' %}">👤 Add User</a>
+    <a href="{% url 'add-project' %}">📂 Add Project</a>
+    <a href="{% url 'add-in-existing-project' %}">➕ Existing Project</a>
+    <a href="{% url 'publication_list' %}">🌐 Publication Sites</a>
+    <a href="{% url 'user-dashboard' %}">📊 User Dashboard</a>
+  </div>
 
-</div>
+  <!-- Main Content -->
+  <div class="content">
+    <h2 class="mb-3">Overview</h2>
+    <p class="text-muted">Manage your projects, publications, and users from one place.</p>
+
+    <!-- Metrics -->
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="card p-3">
+          <div class="metric">{{ avg_da }}</div>
+          <div class="metric-label">Avg Domain Authority</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card p-3">
+          <div class="metric">{{ avg_dr }}</div>
+          <div class="metric-label">Avg Domain Rating</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card p-3">
+          <div class="metric">{{ total_sites }}</div>
+          <div class="metric-label">Total Sites</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row mb-4">
+      <div class="col-md-6">
+        <div class="card p-3">
+          <h3>Site Categories</h3>
+          <canvas id="categoryChart" height="150"></canvas>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card p-3">
+          <h3>User Allocations</h3>
+          <canvas id="userChart" height="150"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Categories Chart
+  new Chart(document.getElementById('categoryChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ categories|safe }},
+      datasets: [{
+        label: 'Sites',
+        data: {{ category_counts|safe }},
+        backgroundColor: '#6c5ce7'
+      }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+
+  // User Allocations Chart
+  new Chart(document.getElementById('userChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ usernames|safe }},
+      datasets: [{
+        label: 'Assigned Projects',
+        data: {{ user_counts|safe }},
+        backgroundColor: '#00cec9'
+      }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+</script>
 </body>
 </html>

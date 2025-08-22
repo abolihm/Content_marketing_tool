@@ -22,81 +22,71 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.05);
             text-align: center;
         }
-        .card h2 {
-            margin: 0;
-            font-size: 32px;
-            color: #333;
-        }
-        .card p {
-            margin: 8px 0 0;
-            font-size: 16px;
-            color: #777;
-        }
-        .chart-options {
-            margin-bottom: 20px;
-        }
+        .card h2 { margin: 0; font-size: 32px; color: #333; }
+        .card p { margin: 8px 0 0; font-size: 16px; color: #777; }
+        .chart-options { margin-bottom: 20px; }
         .chart-container {
             margin-bottom: 50px;
             background-color: #fff;
             padding: 20px;
             border-radius: 10px;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: #fff;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-            font-size: 14px;
-        }
-        th {
-            background-color: #f0f0f0;
-        }
-        a {
-            color: #007bff;
-        }
+        table { width: 100%; border-collapse: collapse; background-color: #fff; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px; }
+        th { background-color: #f0f0f0; }
+        a { color: #007bff; }
+        .edit-form { display: none; }
+        .edit-icon { cursor: pointer; color: #007bff; font-size: 16px; }
+        .filters { display: flex; gap: 10px; margin-bottom: 20px; }
     </style>
+    <script>
+        function toggleEdit(id) {
+            document.getElementById("display-" + id).style.display = "none";
+            document.getElementById("edit-" + id).style.display = "table-row";
+        }
+    </script>
 </head>
 <body>
 
     <h1>{{ selected_user }}'s Dashboard</h1>
 
-    <!-- User Selection Form -->
-    <form method="get" style="margin-bottom: 20px;">
-        <label for="user"><strong>Select User:</strong></label>
-        <select name="user" id="user" onchange="this.form.submit()">
+    <!-- Filters -->
+    <form method="get" class="filters">
+        <label><strong>User:</strong></label>
+        <select name="user" onchange="this.form.submit()">
             {% for user in users %}
                 <option value="{{ user }}" {% if user == selected_user %}selected{% endif %}>{{ user }}</option>
+            {% endfor %}
+        </select>
+
+        <label><strong>Project:</strong></label>
+        <select name="project" onchange="this.form.submit()">
+            <option value="">All</option>
+            {% for p in projects %}
+                <option value="{{ p }}" {% if p == selected_project %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+        </select>
+
+        <label><strong>Month:</strong></label>
+        <select name="month" onchange="this.form.submit()">
+            <option value="">All</option>
+            {% for m in months %}
+                <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>
             {% endfor %}
         </select>
     </form>
 
     <!-- Summary Cards -->
     <div class="cards">
-        <div class="card">
-            <h2>{{ total_projects }}</h2>
-            <p>Total Projects</p>
-        </div>
-        <div class="card">
-            <h2>{{ allocated_links }}</h2>
-            <p>Allocated Links</p>
-        </div>
-        <div class="card">
-            <h2>{{ live_links }}</h2>
-            <p>Live Links</p>
-        </div>
-        <div class="card">
-            <h2>{{ pending_links }}</h2>
-            <p>Pending Links</p>
-        </div>
+        <div class="card"><h2>{{ total_projects }}</h2><p>Total Projects</p></div>
+        <div class="card"><h2>{{ allocated_links }}</h2><p>Allocated Links</p></div>
+        <div class="card"><h2>{{ live_links }}</h2><p>Live Links</p></div>
+        <div class="card"><h2>{{ pending_links }}</h2><p>Pending Links</p></div>
     </div>
 
     <!-- Chart Type Selector -->
     <div class="chart-options">
-        <label for="chartType"><strong>Choose Chart Type:</strong></label>
+        <label><strong>Choose Chart Type:</strong></label>
         <select id="chartType" onchange="renderChart()">
             <option value="bar">Bar</option>
             <option value="line">Line</option>
@@ -104,13 +94,13 @@
         </select>
     </div>
 
-    <!-- ECharts Container -->
+    <!-- Chart -->
     <div class="chart-container">
         <h3>Project Performance</h3>
         <div id="echartContainer" style="height: 400px; width: 100%;"></div>
     </div>
 
-    <!-- Link Table -->
+    <!-- Table -->
     <h3>Link Details</h3>
     <table>
         <thead>
@@ -130,11 +120,13 @@
                 <th>Blogger</th>
                 <th>Collected</th>
                 <th>Payment</th>
+                <th>Edit</th>
             </tr>
         </thead>
         <tbody>
             {% for row in table_data %}
-            <tr>
+            <!-- Display Row -->
+            <tr id="display-{{ row.id }}">
                 <td>{{ row.project_name }}</td>
                 <td>{{ row.publication_site }}</td>
                 <td>{{ row.month }}</td>
@@ -150,12 +142,37 @@
                 <td>{{ row.blogger_name }}</td>
                 <td>{{ row.collected_status }}</td>
                 <td>{{ row.payment_status }}</td>
+                <td><span class="edit-icon" onclick="toggleEdit({{ row.id }})">&#9998;</span></td>
+            </tr>
+
+            <!-- Edit Row -->
+            <tr id="edit-{{ row.id }}" class="edit-form">
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="id" value="{{ row.id }}">
+                    <td><input type="text" name="project_name" value="{{ row.project_name }}" class="form-control"></td>
+                    <td><input type="text" name="publication_site" value="{{ row.publication_site }}" class="form-control"></td>
+                    <td><input type="text" name="month" value="{{ row.month }}" class="form-control"></td>
+                    <td><input type="text" name="keyword_1" value="{{ row.keyword_1 }}" class="form-control"></td>
+                    <td><input type="text" name="url_page_1" value="{{ row.url_page_1 }}" class="form-control"></td>
+                    <td><input type="text" name="keyword_2" value="{{ row.keyword_2 }}" class="form-control"></td>
+                    <td><input type="text" name="url_page_2" value="{{ row.url_page_2 }}" class="form-control"></td>
+                    <td><input type="text" name="status" value="{{ row.status }}" class="form-control"></td>
+                    <td><input type="text" name="live_url" value="{{ row.live_url }}" class="form-control"></td>
+                    <td><input type="text" name="live_url_date" value="{{ row.live_url_date }}" class="form-control"></td>
+                    <td><input type="text" name="price" value="{{ row.price }}" class="form-control"></td>
+                    <td><input type="text" name="invoice_number" value="{{ row.invoice_number }}" class="form-control"></td>
+                    <td><input type="text" name="blogger_name" value="{{ row.blogger_name }}" class="form-control"></td>
+                    <td><input type="text" name="collected_status" value="{{ row.collected_status }}" class="form-control"></td>
+                    <td><input type="text" name="payment_status" value="{{ row.payment_status }}" class="form-control"></td>
+                    <td><button type="submit" class="btn btn-success btn-sm">Save</button></td>
+                </form>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <!-- ECharts Script -->
+    <!-- Chart Script -->
     <script>
         const chartData = {
             labels: [{% for row in bar_chart_data %}"{{ row.0 }}",{% endfor %}],
@@ -168,7 +185,6 @@
 
         function renderChart() {
             const type = document.getElementById('chartType').value;
-
             let option = {
                 tooltip: { trigger: 'axis' },
                 legend: { data: ['Allocated', 'Live', 'Pending'] },
@@ -176,7 +192,6 @@
                 yAxis: { type: 'value' },
                 series: []
             };
-
             if (type === 'bar' || type === 'line') {
                 option.series = [
                     { name: 'Allocated', type: type, data: chartData.allocated },
@@ -201,7 +216,7 @@
             chart.setOption(option);
         }
 
-        renderChart(); // Initial chart
+        renderChart();
     </script>
 
 </body>
